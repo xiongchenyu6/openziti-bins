@@ -23,44 +23,25 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    nixpkgs-darwin,
-    flake-compat,
-    flake-parts,
-    napalm,
-    zitiConsole,
-  }:
-    flake-parts.lib.mkFlake {inherit self;} {
-      systems = [
-        "x86_64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
-      perSystem = {
-        inputs',
-        pkgs,
-        system,
-        ...
-      }: let
-        inherit (pkgs.lib) pipe recursiveUpdate;
-        inherit (zitiVersions) state;
+  outputs = { self, nixpkgs, nixpkgs-darwin, flake-compat, flake-parts, napalm
+    , zitiConsole, }:
+    flake-parts.lib.mkFlake { inherit self; } {
+      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      perSystem = { inputs', pkgs, system, ... }:
+        let
+          inherit (pkgs.lib) pipe recursiveUpdate;
+          inherit (zitiVersions) state;
 
-        zitiLib = (import lib/lib.nix) pkgs;
-        zitiVersions = (import ./versions.nix) pkgs;
-      in
-        with pkgs; rec {
+          zitiLib = (import lib/lib.nix) pkgs;
+          zitiVersions = (import ./versions.nix) pkgs;
+        in with pkgs; rec {
           devShells.default = mkShell {
             buildInputs = with packages; [
               alejandra
               shfmt
               treefmt
-              ziti-cli-functions_latest
-              ziti-controller_latest
               ziti-edge-tunnel_latest
               ziti_latest
-              ziti-router_latest
               ziti-tunnel_latest
             ];
           };
@@ -68,15 +49,13 @@
           legacyPackages = packages;
 
           packages = with zitiLib;
-            pipe {} [
+            pipe { } [
               (recursiveUpdate (mkZitiPkgs state))
-              (recursiveUpdate (mkZitiBinTypePkgs state "controller"))
-              (recursiveUpdate (mkZitiBinTypePkgs state "router"))
               (recursiveUpdate (mkZitiBinTypePkgs state "tunnel"))
               (recursiveUpdate (mkZitiCliFnPkgs state))
               (recursiveUpdate (mkZitiConsole inputs' self))
               (recursiveUpdate (mkZitiEdgeTunnelPkgs state system))
-              (recursiveUpdate {default = packages.ziti-edge-tunnel_latest;})
+              (recursiveUpdate { default = packages.ziti-edge-tunnel_latest; })
             ];
         };
 
